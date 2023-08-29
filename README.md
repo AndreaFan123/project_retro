@@ -4,7 +4,7 @@ Here are some learnings from the project that I currently have, due to the NDA, 
 
 <details>
 
-<summary>Next.js</summary>
+<summary>Next.js: Dynamic Metadata</summary>
 
 ## Dynamic Metadata
 
@@ -35,16 +35,16 @@ There are some fields that are required for the Metadata object:
 
 When I tried to implement dynamic metadata, there was an issue that I needed to fix:
 
-- my root `layout.tsx` was not server-side due to the `BottomNavbar.tsx` component that needed to be detected in order to show the bottom navbar.
+- my root `layout.tsx` was not server component due to the `BottomNavbar.tsx` component that needed to be detected in order to show the bottom navbar.
 
 ### How to fix it?
 
-Previously, `BottomNavbar.tsx` was an uncontrolled component, since I needed my root `layout.tsx` to be server-side, I've decided to make `BottomNavbar.tsx` a controlled component.
+Previously, `BottomNavbar.tsx` was an uncontrolled component, since I needed my root `layout.tsx` to be server component, I've decided to make `BottomNavbar.tsx` a controlled component.
 
 essentially, the `BottomNavbar` would be hidden when the user scrolls down, and it would be shown when the user scrolls up. Here the states were passed from the root `layout.tsx` as props to the `BottomNavbar.tsx` component.
 
 ```typescript
-// layout.tsx
+// layout.tsx: Client component
 // BottomNavbar: Uncontrolled component
 
 "use client";
@@ -113,7 +113,7 @@ export default function RootLayout({
 
 ```typescript
 // layout.tsx
-// Change to Server-side
+// Change to Server component by not specifying "use client"
 
 const workSans = Work_Sans({ subsets: ["latin"] });
 
@@ -203,7 +203,7 @@ export const BottomNavbar = () => {
 };
 ```
 
-Now my `layout.tsx` was server-side, and I was able to implement dynamic metadata.
+Now my `layout.tsx` was server component, and I was able to implement dynamic metadata.
 
 Example of using dynamic metadata:
 
@@ -229,5 +229,289 @@ export const metadata: Metadata = {
 ```
 
 The result would be `Terms & Conditions | Brand Name`.
+
+</details>
+
+<details>
+<summary>Next.js: Fetch API</summary>
+
+</details>
+
+<details>
+  <summary> input </summary>
+
+## Design a input component that can be applied to different situations
+
+### The problem
+
+When it comes to input, there are many different types of input. In order to design a input component that can be applied to multiple types, we need to consider the following things:
+
+- Types of input(checkbox, radio, text, number, email, password, etc.)
+- Warning / Success messages / icons
+- States of input (focus, valid, invalid, disabled, etc.)
+- Actions of input (onchange, onblur, onfocus, etc.)
+
+Following were the basic `registration information` that required user to fill in in my project:
+
+- First name
+- Last name
+- Email
+- confirm email
+- Confirm password
+- Phone number
+
+But there won't be only one form in the project, there will be many different forms, following were the other forms that required user to fill in:
+
+`Contact form`:
+
+- First name
+- Last name
+- Email
+- Phone number(with default country code)
+- member number
+
+`Campaign form`:
+
+- First name
+- Last name
+- Email
+- Phone number(with default country code)
+- Company Name
+- Budget
+
+## A standard input
+
+A standard input would be like this:
+
+```html
+<label for="">XXX</label> <input id="" placeholder="" type="" />
+```
+
+Or in React:
+
+```javascript
+<label htmlFor="">XXX</label>
+<input id="" placeholder="" type="" />
+```
+
+## Prepare constants
+
+There are two ways to prepare constants:
+
+- Make an `array` of inputs with series of information in it.
+- Make multiple `objects` of inputs with series of information in it.
+
+First of all, let's define types/interface first.
+
+```typescript
+// types.ts
+
+export type InputType =
+	| "text"
+	| "email"
+	| "password"
+	| "number"
+	| "tel"
+	| "checkbox"
+	| "radio";
+
+export interface Input {
+	labelFor: string; // for attribute of label
+	labelText: string; // text of label
+	name: string; // name of input
+	autocomplete: string; // autocomplete attribute of input
+	id: string; // id of input
+	placeholder: string; // placeholder of input
+	type: InputType; // type of input
+	required: boolean; // required attribute of input
+	disabled: boolean; // disabled attribute of input
+	errorMessages: string; // error messages of input
+	successMessages: string; // success messages of input
+	warningIcon: React.ReactNode; // warning icon of input
+	successIcon: React.ReactNode; // success icon of input
+	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; // onchange event of input
+	onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void; // onkeydown event of input
+}
+```
+
+With the types/interface defined, we can prepare constants now.
+
+```typescript
+// constants.ts
+// Separate the constants
+import { Input, InputType } from "./types";
+
+export const inputTypes: InputType[] = [
+  "text",
+  "email",
+  "password",
+  "number",
+  "tel",
+  "checkbox",
+  "radio",
+];
+
+export firstName:Input = {
+  labelFor: "firstName",
+  labelText: "Your Name*",
+  name: "firstName",
+  autocomplete: "given-name",
+  id: "firstName",
+  placeholder: "First Name",
+  type: "text",
+  required: true,
+  disabled: false,
+  errorMessages: "Wrong format",
+  successMessages: "",
+  warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+  successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    ...
+  },
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+  },
+};
+
+export lastName:Input = {
+  labelFor: "lastName",
+  labelText: "",
+  name: "lastName",
+  autocomplete: "family-name",
+  id: "lastName",
+  placeholder: "Last Name",
+  type: "text",
+  required: true,
+  disabled: false,
+  errorMessages: "Wrong format",
+  successMessages: "",
+  warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+  successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    ...
+  },
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+  },
+};
+
+export email:Input = {
+  labelFor: "email",
+  labelText: "Email*",
+  name: "email",
+  autocomplete: "email",
+  id: "email",
+  placeholder: "Email",
+  type: "email",
+  required: true,
+  disabled: false,
+  errorMessages: "Wrong format of email",
+  successMessages: "Email is valid",
+  successMessages: "",
+  warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+  successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    ...
+  },
+  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+  },
+};
+
+// Repeat the same for other inputs
+```
+
+```typescript
+// constants.ts
+// Combine the constants into an array
+
+import { Input, InputType } from "./types";
+
+export const inputTypes: InputType[] = [
+  "text",
+  "email",
+  "password",
+  "number",
+  "tel",
+  "checkbox",
+  "radio",
+];
+
+export const Registration:Input[] = [
+  {
+    labelFor: "firstName",
+    labelText: "Your Name*",
+    name: "firstName",
+    autocomplete: "given-name",
+    id: "firstName",
+    placeholder: "First Name",
+    type: "text",
+    required: true,
+    disabled: false,
+    errorMessages: "Wrong format",
+    successMessages: "",
+    warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+    successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+    onChange: (e: React.  ChangeEvent<HTMLInputElement>) => {
+    ...
+    },
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+    },
+  },
+  {
+    labelFor: "lastName",
+    labelText: "",
+    name: "lastName",
+    autocomplete: "family-name",
+    id: "lastName",
+    placeholder: "Last Name",
+    type: "text",
+    required: true,
+    disabled: false,
+    errorMessages: "Wrong format",
+    successMessages: "",
+    warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+    successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    ...
+    },
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+    },
+  },
+  {
+    labelFor: "email",
+    labelText: "Email",
+    name: "email",
+    autocomplete: "email",
+    id: "email",
+    placeholder: "Email",
+    type: "email",
+    required: true,
+    disabled: false,
+    errorMessages: "Wrong format of email",
+    successMessages: "",
+    warningIcon: <WarningIcon />, // Or <Image src={warning} width={0} height={0} alt="Warning icon, wrong format"/>
+    successIcon: <SuccessIcon />, // Or <Image src={check} width={0} height={0} alt="Success icon, correct format"/>
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+    ...
+    },
+    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+    ...
+    },
+  }
+]
+
+export const Contact:Input[] = [
+  // Same as above
+]
+```
+
+Personally, I prefer the first way, since it is more readable and easier to maintain.
+
+Let's take a look at the figma. Based on the design , we only have to define once, let's why there's no `labelText` for `last name`
+
+![name input](image.png)
 
 </details>
