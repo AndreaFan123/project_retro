@@ -238,46 +238,62 @@ The result would be `Terms & Conditions | Brand Name`.
 </details>
 
 <details>
-  <summary> input </summary>
+  <summary> Complicated Form </summary>
 
 ## Design a input component that can be applied to different situations
 
 ### The problem
 
-When it comes to input, there are many different types of input. In order to design a input component that can be applied to multiple types, we need to consider the following things:
+When it comes to form, there are many different types of components. In order to design dynamic components that can be applied to multiple scenario, we need to consider the following things:
 
 - Types of input(checkbox, radio, text, number, email, password, etc.)
 - Warning / Success messages / icons
-- States of input (focus, valid, invalid, disabled, etc.)
+- States of input / select / buttons, etc (focus, valid, invalid, disabled, etc.)
 - Actions of input (onchange, onblur, onfocus, etc.)
 
-Following were the basic `registration information` that required user to fill in in my project:
+Following were the input / select / buttons, etc, `registration information` that required user to fill in in my project:
 
-- First name
-- Last name
-- Email
-- confirm email
-- Confirm password
-- Phone number
+- title (chip when big screen, select when small screen)
+- First name (input)
+- Last name (input)
+- Email (input)
+- confirm email (input)
+- mobile with no country codes. (input)
+- Country (selector)
+- Preferred language (chip)
+- gender (chip)
+- Birthday Month (selector)
+- Birthday Year (selector)
 
 But there won't be only one form in the project, there will be many different forms, following were the other forms that required user to fill in:
 
 `Contact form`:
 
-- First name
-- Last name
-- Email
-- Phone number(with default country code)
-- member number
+- title (chip when big screen, select when small screen)
+- First name (input)
+- Last name (input)
+- Email (input)
+- Mobile with default country code (input)
+- member number (input)
+- Enquiry (selector)
+- Details of enquiry (input)
+- Message (textarea)
+- image upload (input)
 
 `Campaign form`:
 
-- First name
-- Last name
-- Email
-- Phone number(with default country code)
-- Company Name
-- Budget
+- title (chip when big screen, select when small screen)
+- First name (input)
+- Last name (input)
+- Mobile with default country code (input)
+- Email (input)
+- Type of event (selector)
+- Event Date (input)
+- Event Time (hr and min) (selector)
+- No. of Guests (chip)
+- Company Name (input)
+- Budget (input)
+- Message (textarea)
 
 ## A standard input
 
