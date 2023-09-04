@@ -295,7 +295,7 @@ But there won't be only one form in the project, there will be many different fo
 - Budget (input)
 - Message (textarea)
 
-## A standard input
+## Input
 
 A standard input would be like this:
 
@@ -454,7 +454,7 @@ export const firstName: Input = {
 Inside our form, we can use the constants like this: I used to create states for each input, but it was not a good practice, using object to store the values of each input is a better way.
 
 ```typescript
-// NewInput.tsx
+// RegistrationForm.tsx
 import * as React from "react";
 import { firstName, lastName } from "...";
 
@@ -487,21 +487,20 @@ export const RegistrationForm = () => {
 				value={inputVal.firstName}
 				innerRef={inputRefs.current[0]}
 			/>
-			// and other input fields
 		</form>
 	);
 };
 ```
 
-## My spaghetti code
+## My spaghetti input component
 
-This is my initial `input` component, it has some basic functionalities, which are
+This was my initial `input` component, it has some basic functionalities, which are
 :
 
 - It will show warning icon and error message when user enters invalid input.
 - It will show check icon when user enters valid input.
 
-### Break down the component
+### Breakdown the component
 
 ```typescript
 import * as React from "react";
@@ -680,5 +679,300 @@ export const InfoInput2 = ({
 - I've removed the `handleValue` function, and used `onChange` to handle the value of each input.
 - Create an object called fieldIds, which stores the ids of each input.
 - Create `renderIconsConditionally` function to render icons and warning messages conditionally.
+
+---
+
+## Chip
+
+Chip is a component that can be used to select multiple options. It is usually used in the form to select multiple options, but in my project, it was used to select one option.
+
+We can use button as a chip, let's define the types/interface first.
+
+### Here was my original types/interface:
+
+```typescript
+export interface ChipProps {
+	title: string;
+	items: ChipItem[];
+}
+
+export interface ChipItem {
+	id: string;
+	name?: string;
+	label?: string;
+	icon?: ReactNode;
+	tabIndex: number;
+}
+```
+
+### This is the revised types/interface:
+
+```typescript
+import { ReactNode } from "react";
+
+export interface ChipItem {
+	id: string;
+	name?: string;
+	label?: string;
+	icon?: ReactNode;
+	tabIndex: number;
+}
+
+export interface ChipProps {
+	title: string;
+	path?: string;
+	lang?: string;
+	items: ChipItem[];
+	onClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+}
+```
+
+### What have I changed?
+
+- I've added `path`, `lang` and `onClick` property to the interface.
+
+### Prepare constants
+
+```typescript
+import { ChipProps } from "@/types/registration/chip";
+
+export const LanChips = {
+	title: "Preferred Language*",
+	onClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+		e.preventDefault();
+	},
+	items: [
+		{
+			id: "zh_TC",
+			name: "preferredLan",
+			label: "繁中",
+			tabIndex: 1,
+		},
+		{
+			id: "en",
+			name: "preferredLan",
+			label: "English",
+			tabIndex: 2,
+		},
+	],
+} as ChipProps;
+
+// Repeat the same for other chips
+```
+
+### Implement constants in the form
+
+```typescript
+// RegistrationForm.tsx
+import * as React from "react";
+import { firstName } from "...";
+import { LanChips } from "...";
+
+export const RegistrationForm = () => {
+	const [inputVal, setInputVal] = React.useState({
+		firstName: "",
+		lastName: "",
+		email: "",
+		mobile: "",
+	});
+	return (
+		<form>
+			<InfoInput
+				id={firstName.id}
+				labelText={firstName.labelText}
+				labelFor={firstName.labelFor}
+				name={firstName.name}
+				type={firstName.type}
+				autoComplete={firstName.autoComplete}
+				isRequired={firstName.isRequired}
+				placeHolder={firstName.placeHolder}
+				isFirstNameValid={isFirstNameValid}
+				onChange={handleInput}
+				maxLength={25}
+				lang={lang}
+				path=""
+				storeValue=""
+			/>
+			<Chip
+				title={LanChips.title}
+				items={LanChips.items}
+				onClick={handleButton}
+				path={path}
+				lang={lang}
+			/>
+		</form>
+	);
+};
+```
+
+### My spaghetti Chip component
+
+```typescript
+// OldChip.tsx
+
+interface Props {
+	items: ChipProps;
+	storeValue?: string;
+	path?: string;
+	lang?: string;
+	buttonClass?: string;
+	onChange: (e: MouseEvent<HTMLButtonElement>) => void;
+}
+
+export const Chips = ({
+	items,
+	onChange,
+	buttonClass,
+	storeValue,
+	path,
+	lang,
+}: Props) => {
+	return (
+		<div className="flex w-full flex-col gap-[12px]">
+			<label
+				htmlFor={items.labelTitle}
+				className="text-[14px] font-semibold leading-4 text-primaryDark lg:text-primaryGold xl:text-[16px]"
+			>
+				{title}
+			</label>
+			<div className="flex  gap-[12px] md:w-full md:gap-[16px] ">
+				{items.items.map((item, index) => (
+					<button
+						className={`flex items-center justify-center rounded-[16px] border-[1px] border-primaryGold p-[16px] text-[14px] leading-5
+            text-primaryDark sm:text-[14px] lg:rounded-[40px]  xl:px-4 xl:py-[.9rem] xl:text-[16px] ${
+							selectedIndex === item.tabIndex &&
+							"bg-primaryGold font-semibold text-white"
+						} 
+            ${
+							item.label === "male" || item.label === "female"
+								? "flex h-[55px] w-[55px] items-center justify-center rounded-full"
+								: ""
+						}
+            ${buttonClass}
+            `}
+						value={item.label}
+						key={index}
+						type="button"
+						role="button"
+						aria-label={item.label}
+						tabIndex={item.tabIndex}
+						name={item.name}
+						onClick={(e) => handleChipSelect(item.tabIndex, e)}
+					>
+						{item.label !== "male" && item.label !== "female" && (
+							<span>{item.label}</span>
+						)}
+						{item.label === "male" && (
+							<Image
+								src={
+									selectedIndex === item.tabIndex || storeValue === item.label
+										? SelectedMale
+										: MobileMaleIcon
+								}
+								width={0}
+								height={0}
+								alt="Male Icon"
+								className="block h-auto w-[10px] self-center"
+							/>
+						)}
+						{item.label === "female" && (
+							<Image
+								src={
+									selectedIndex === item.tabIndex || storeValue === item.label
+										? SelectedFemale
+										: MobileFemaleIcon
+								}
+								width={0}
+								height={0}
+								alt="Female Icon"
+								className="block h-auto w-[14px] self-center"
+							/>
+						)}
+					</button>
+				))}
+			</div>
+		</div>
+	);
+};
+```
+
+### Revised the code
+
+```typescript
+// NewChip.tsx
+
+const renderMaleOrFemaleIcon = (
+	label: string,
+	selectIndx: number | null,
+	indx: number
+) => {
+	return (
+		<>
+			{label === "male" ? (
+				<Image
+					src={selectIndx === indx ? SelectedMale : MobileMaleIcon}
+					width={0}
+					height={0}
+					alt="Male Icon"
+					className="block h-auto w-[10px] self-center"
+				/>
+			) : (
+				<Image
+					src={selectIndx === indx ? SelectedFemale : MobileFemaleIcon}
+					width={0}
+					height={0}
+					alt="Female Icon"
+					className="block h-auto w-[14px] self-center"
+				/>
+			)}
+		</>
+	);
+};
+
+export const Chip = ({ title, items, path, lang, onClick }: ChipProps) => {
+	const [, setSelectedChip] = useState("");
+	const [selectedIndx, setSelectedIndx] = useState<number | null>(null);
+
+	const IconStyle =
+		"flex h-[55px] w-[55px] items-center justify-center rounded-full";
+
+	return (
+		<>
+			<label htmlFor={title}>{title}</label>
+			<div className="flex gap-4">
+				{items.map((item) => (
+					<button
+						className={`rounded-[16px] border border-primaryGold p-4 text-[14px] leading-5 text-primaryDark sm:text-[14px] lg:rounded-[40px]  xl:px-4 xl:py-[.9rem] xl:text-[16px] ${
+							selectedIndx === item.tabIndex &&
+							"bg-primaryGold font-semibold text-white"
+						} ${
+							item.label === "male" || item.label === "female" ? IconStyle : ""
+						} ${item.label === "Undisclosed" && "rounded-[40px]"} `}
+						name={item.name}
+						id={item.id}
+						value={item.label}
+						key={item.id}
+						aria-label={item.label}
+						onClick={(e) => handleChipSelectClick(item.tabIndex, e)}
+					>
+						{item.label !== "male" && item.label !== "female" && (
+							<span>{item.label}</span>
+						)}
+						{item.label === "male" &&
+							renderMaleOrFemaleIcon(item.label, selectedIndx, item.tabIndex)}
+						{item.label === "female" &&
+							renderMaleOrFemaleIcon(item.label, selectedIndx, item.tabIndex)}
+					</button>
+				))}
+			</div>
+		</>
+	);
+};
+```
+
+### What have I changed?
+
+- I've extracted `male` and `female` icons into a function called `renderMaleOrFemaleIcon` and passed the parameters to it.
+- Extracted icon style into a variable called `IconStyle`.
 
 </details>
