@@ -976,3 +976,53 @@ export const Chip = ({ title, items, path, lang, onClick }: ChipProps) => {
 - Extracted icon style into a variable called `IconStyle`.
 
 </details>
+
+<details>
+  <summary>Get Districts</summary>
+
+ ### Context
+ When user select region, and call api to get all data, then filter the district accrodingly.
+ I've passed regionName as parameter, and use `switch` method to check if name was matched.
+
+```typescript
+const getDistrictList = (regionName: string) => {
+  switch (regionName) {
+    case "Hong Kong Island":
+      const hkislandDistricts = regionList && regionList[0].districts.map(district => district.name);
+         if (hkislandDistricts !== undefined) {
+           return hkislandDistricts;
+         }
+         break;
+    case "Kowloon":
+         const kowloonDistricts = regionList && regionList[1].districts.map(district => district.name);
+         if (kowloonDistricts !== undefined) {
+           return kowloonDistricts;
+         }
+    case "New Territories":
+         const newTerritoryDistricts = regionList && regionList[2].districts.map(district => district.name);
+         if (newTerritoryDistricts !== undefined) {
+           return newTerritoryDistricts;
+         }
+    default:
+         return [];
+     }
+```
+
+### The downside of this approach
+1. Using none unique identifier name.
+2. Case shouldn't be hardcode, as if the api is updated.
+Below is revised one.
+
+```typescript
+  const getDistrictList = (regionName: string) => {
+    if (!regionList) {
+      return [];
+    }
+
+    const region = regionList.find(region => region.name === regionName);
+    const districtList = region && region.districts ? region.districts.map(district => district.name) : [];
+
+    return districtList;
+}
+```
+</details>
