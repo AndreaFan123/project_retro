@@ -980,11 +980,12 @@ export const Chip = ({ title, items, path, lang, onClick }: ChipProps) => {
 <details>
   <summary>Get Districts</summary>
 
- ### Context
- When user select region, and call api to get all data, then filter the district accrodingly.
- I've passed regionName as parameter, and use `switch` method to check if name was matched.
+### Context
 
-```typescript
+When user select region, and call api to get all data, then filter the district accrodingly.
+I've passed regionName as parameter, and use `switch` method to check if name was matched.
+
+```ts
 const getDistrictList = (regionName: string) => {
   switch (regionName) {
     case "Hong Kong Island":
@@ -1009,20 +1010,321 @@ const getDistrictList = (regionName: string) => {
 ```
 
 ### The downside of this approach
+
 1. Using none unique identifier name.
 2. Case shouldn't be hardcode, as if the api is updated.
-Below is revised one.
+   Below is revised one.
 
 ```typescript
-  const getDistrictList = (regionName: string) => {
-    if (!regionList) {
-      return [];
-    }
+const getDistrictList = (regionName: string) => {
+	if (!regionList) {
+		return [];
+	}
 
-    const region = regionList.find(region => region.name === regionName);
-    const districtList = region && region.districts ? region.districts.map(district => district.name) : [];
+	const region = regionList.find((region) => region.name === regionName);
+	const districtList =
+		region && region.districts
+			? region.districts.map((district) => district.name)
+			: [];
 
-    return districtList;
-}
+	return districtList;
+};
 ```
+
+</details>
+
+<details>
+ <summary>OTP flow</summary>
+In this project we've implemented otp flow, below is the flow chart:
+
+![Alt text](./screenshots/otp.png)
+
+## Initial implementation
+
+- Implemented mobile validation and click to send otp.
+  - POST request to send otp.
+- Backend send otp to user's mobile.
+  - If response is okay, then Otp input field will be shown.
+- User enter otp and submit.
+  - POST request to verify otp.
+- Backend verify otp and send response.
+  - If otp is valid, user will be redirected to next page.
+- Deactivate button if user has not entered mobile number.
+  - Button text: Get OTP
+- Deactivate button if user has entered invalid mobile number.
+- Activate button if user has entered valid mobile number.
+- Deactivate button if user gets otp (freeze button for 60 seconds).
+  - Button text: Resend(60)s.
+  - Disabled input filed.
+- Activate button after 60s and remain button text as Resend.
+
+### Question
+
+- After 60s, if user changes the mobile number, should we remain button as **Resend** or we will be back to the initial state?
+
+### New implementation
+
+- Deactivate button if user has not entered mobile number.
+  - Button text: Get OTP
+- Deactivate button if user has entered invalid mobile number.
+- Activate button if user has entered valid mobile number.
+- Deactivate button if user gets otp (freeze button for 60 seconds).
+  - Button text: Resend(60)s
+  - Disabled input filed.
+- Activate button after 60s and remain button text as Resend.
+- After 60s, if user changes the mobile number, we will be back to the initial state.
+  - Button text: Get OTP
+- Repeat the same flow.
+
+```javascript
+"use client";
+import { ChangeEvent, useEffect, useState, FormEvent, useRef } from "react";
+import { usePathname } from "next/navigation";
+import { useWindowSize } from "@/hook/useWindowSize";
+import { useTranslation } from "@/app/i18n/client";
+import { LocaleKeysType } from "@/app/i18n";
+import {
+	useSendLoginRequestMutation,
+	useSendRegistrationRequestMutation,
+} from "@/redux/api/authApi";
+import { ROUTES } from "@/constants/routes";
+import { OtpInput } from "./OtpInput";
+import { useDispatch } from "react-redux";
+import { getCountryCodeWithMobile } from "@/redux/slice/registrationMobileSlice";
+import { LocalStorageUtils } from "@/utils/clientUtils";
+import { getRouteNameFromPathname } from "@/utils/commonUtils";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import Link from "next/link";
+import Image from "next/image";
+import Chevron from "@/images/icons/Icon_C.png";
+import Warning from "@/images/icons/Icon_warning@3x.png";
+
+interface MobileRegex {
+	[key: string]: RegExp;
+}
+
+export const GetOtpInput = ({ lang }: { lang: LocaleKeysType }) => {
+	const { translate } = useTranslation(lang);
+	const pathname = usePathname();
+	const inputRef = (useRef < HTMLInputElement) | (null > null);
+	const isLoginPage =
+		getRouteNameFromPathname(pathname).secondSlug === ROUTES.LOGIN;
+	const isRegistrationPage =
+		getRouteNameFromPathname(pathname).secondSlug === ROUTES.REGISTRATION;
+	const [countryCode, setCountryCode] = useState("852");
+	const [mobile, setMobile] = useState("");
+	const [countdownSec, setCountdownSec] = useState(60);
+	const [isCounting, setIsCounting] = useState(false);
+	const [buttonText, setButtonText] = useState("Get Otp");
+	const [showOtpInput, setShowOtpInput] = useState(false);
+	const [validMobile, setValidMobile] = useState(false);
+	const [errorMsg, setErrorMsg] = useState("");
+	const formattedMobile = mobile.split(" ").join("");
+	const { width } = useWindowSize();
+	const dispatch = useDispatch();
+	const countryCodeFromRedux = useSelector(
+		(state: RootState) => state.registrationMobile.code
+	);
+	const mobileFromRedux = useSelector(
+		(state: RootState) => state.registrationMobile.mobile
+	);
+
+	const [sendLoginRequest, { data: loginRequestResponse }] =
+		useSendLoginRequestMutation();
+	const [sendRegistrationRequest, { data: registerRequestResponse }] =
+		useSendRegistrationRequestMutation();
+
+	const handleCountryCodeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+		const newCountryCode = e.target.value;
+		setCountryCode(newCountryCode);
+	};
+
+	const handleMobileChange = (e: ChangeEvent<HTMLInputElement>) => {
+		const newMobile = e.target.value;
+		const numericValue = newMobile.replace(/[^0-9]/g, "");
+		const formattedValue = numericValue.replace(/(\d{4})/g, "$1 ").trim();
+		setMobile(formattedValue);
+
+		const mobileRex: MobileRegex = {
+			852: /^[2-9][0-9]{7}$/gm,
+			853: /^[6]\d{7}$/,
+			86: /^1[0-9]{10}$/,
+		};
+
+		if (countryCode in mobileRex) {
+			if (mobileRex[countryCode].test(numericValue)) {
+				setValidMobile(true);
+				setErrorMsg("");
+			} else {
+				setValidMobile(false);
+				setErrorMsg(
+					countryCode === "852" || countryCode === "853"
+						? `Please enter a valid 8-digit +${countryCode} mobile number.`
+						: `Please enter a valid 11-digit +${countryCode} mobile number.`
+				);
+			}
+		}
+	};
+
+	const handleGetOtpSubmit = (e: FormEvent) => {
+		e.preventDefault();
+
+		// Here to reset countdownSec to 60s
+		setCountdownSec(60);
+		setIsCounting(true);
+
+		if (isLoginPage) {
+			sendLoginRequest({ countryCode, mobileNumber: formattedMobile });
+			dispatch(getCountryCodeWithMobile({ code: countryCode, mobile: mobile }));
+			setShowOtpInput(true);
+			setIsCounting(true);
+		}
+
+		if (isRegistrationPage) {
+			sendRegistrationRequest({ countryCode, mobileNumber: formattedMobile });
+			dispatch(getCountryCodeWithMobile({ code: countryCode, mobile: mobile }));
+			setShowOtpInput(true);
+			setIsCounting(true);
+		}
+
+		// Here to check if the new value is equal to the one we've dispatched to redux in order to monitor the change of mobile number.
+		if (
+			isRegistrationPage &&
+			mobile !== "" &&
+			mobile !== mobileFromRedux &&
+			countryCode !== countryCode
+		) {
+			sendRegistrationRequest({ countryCode, mobileNumber: formattedMobile });
+			dispatch(getCountryCodeWithMobile({ code: countryCode, mobile: mobile }));
+			setShowOtpInput(true);
+		}
+
+		// Here to check if the new value is equal to the one we've dispatched to redux in order to monitor the change of mobile number.
+		if (
+			isLoginPage &&
+			mobile !== "" &&
+			mobile !== mobileFromRedux &&
+			countryCode !== countryCode
+		) {
+			sendLoginRequest({ countryCode, mobileNumber: formattedMobile });
+			setShowOtpInput(true);
+		}
+	};
+
+	if (loginRequestResponse) {
+		LocalStorageUtils.post(
+			"LoginSessionToken",
+			loginRequestResponse ? loginRequestResponse.data.sessionToken : ""
+		);
+	}
+
+	if (registerRequestResponse) {
+		LocalStorageUtils.post(
+			"RegisterSessionToken",
+			registerRequestResponse.data.sessionToken
+		);
+	}
+
+	useEffect(() => {
+		let interval: NodeJS.Timeout;
+
+		if (isCounting && countdownSec > 0) {
+			interval = setInterval(() => {
+				setCountdownSec((prevSec) => prevSec - 1);
+			}, 1000);
+		} else if (countdownSec === 0) {
+			setIsCounting(false);
+			setButtonText("Resend");
+		}
+
+		// Here to check if the new value is equal to the one we've dispatched to redux in order to monitor the button text and counting state.
+		if (
+			(isRegistrationPage && mobile !== mobileFromRedux) ||
+			countryCode !== countryCodeFromRedux
+		) {
+			setButtonText("Get OTP");
+			setShowOtpInput(false);
+			setIsCounting(false);
+		}
+
+		if (
+			(isLoginPage && mobile !== mobileFromRedux) ||
+			countryCode !== countryCodeFromRedux
+		) {
+			setButtonText("Get OTP");
+			setShowOtpInput(false);
+			setIsCounting(false);
+		}
+
+		return () => clearInterval(interval);
+	}, [
+		isCounting,
+		countdownSec,
+		mobile,
+		buttonText,
+		mobileFromRedux,
+		countryCode,
+		countryCodeFromRedux,
+		validMobile,
+		isRegistrationPage,
+		isLoginPage,
+	]);
+
+	return (
+		<>
+			<form className="relative flex w-full flex-col items-center justify-center ">
+				<select
+					onChange={handleCountryCodeChange}
+					value={countryCode}
+					name="mobile-country-code"
+					id="mobile-country-code"
+					aria-label="mobile-country-code"
+					form="mobile-otp"
+					style={{ backgroundImage: `url(${Chevron.src})` }}
+					className="..."
+				>
+					<option value="852">+852</option>
+					<option value="853">+853</option>
+					<option value="86">+86</option>
+				</select>
+				<input
+					ref={inputRef}
+					disabled={isCounting === true}
+					type="tel"
+					id="mobile"
+					placeholder={width < 1024 ? "Your Mobile" : "Enter Your Mobile"}
+					onChange={handleMobileChange}
+					value={mobile}
+					className="..."
+				/>
+				<button
+					aria-label="get-tp"
+					disabled={
+						mobile === "" || isCounting === true || validMobile === false
+							? true
+							: false
+					}
+					onClick={handleGetOtpSubmit}
+					className={`... ${
+						mobile && validMobile === true
+							? "border-primaryGold3 bg-primaryGold text-white"
+							: "border-primaryGold3 bg-primaryGold15 text-primaryGold"
+					}  ${
+						isCounting && "border-0 bg-primaryGold bg-opacity-20 text-white"
+					} `}
+				>
+					{isCounting ? `Resend (${countdownSec}s)` : buttonText}
+				</button>
+			</form>
+
+			{(loginRequestResponse && showOtpInput) ||
+			(registerRequestResponse && showOtpInput) ? (
+				<OtpInput lang={lang} />
+			) : null}
+		</>
+	);
+};
+```
+
 </details>
