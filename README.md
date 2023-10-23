@@ -980,11 +980,12 @@ export const Chip = ({ title, items, path, lang, onClick }: ChipProps) => {
 <details>
   <summary>Get Districts</summary>
 
- ### Context
- When user select region, and call api to get all data, then filter the district accrodingly.
- I've passed regionName as parameter, and use `switch` method to check if name was matched.
+### Context
 
-```typescript
+When user select region, and call api to get all data, then filter the district accrodingly.
+I've passed regionName as parameter, and use `switch` method to check if name was matched.
+
+```ts
 const getDistrictList = (regionName: string) => {
   switch (regionName) {
     case "Hong Kong Island":
@@ -1009,20 +1010,55 @@ const getDistrictList = (regionName: string) => {
 ```
 
 ### The downside of this approach
+
 1. Using none unique identifier name.
 2. Case shouldn't be hardcode, as if the api is updated.
-Below is revised one.
+   Below is revised one.
 
 ```typescript
-  const getDistrictList = (regionName: string) => {
-    if (!regionList) {
-      return [];
-    }
+const getDistrictList = (regionName: string) => {
+	if (!regionList) {
+		return [];
+	}
 
-    const region = regionList.find(region => region.name === regionName);
-    const districtList = region && region.districts ? region.districts.map(district => district.name) : [];
+	const region = regionList.find((region) => region.name === regionName);
+	const districtList =
+		region && region.districts
+			? region.districts.map((district) => district.name)
+			: [];
 
-    return districtList;
-}
+	return districtList;
+};
 ```
+
+</details>
+
+<details>
+ <summary>OTP flow</summary>
+In this project we've implemented otp flow, below is the flow chart:
+
+![Alt text](./screenshots/otp.png)
+
+## Initial implementation
+
+- Implemented mobile validation.
+- POST request to send otp.
+- Backend send otp to user's mobile.
+- User enter otp and submit.
+- POST request to verify otp.
+- Backend verify otp and send response.
+- If otp is valid, user will be redirected to next page.
+
+### Button
+
+- Deactivate button if user has not entered mobile number.
+- Deactivate button if user has entered invalid mobile number.
+- Activate button if user has entered valid mobile number.
+- Deactivate button if user gets otp (freeze button for 60 seconds).
+- Activate button after 60s.
+
+### Question
+
+- After 60s, if user changes the mobile number, should we remain button as **Resend** or we will be back to the initial state?
+
 </details>
